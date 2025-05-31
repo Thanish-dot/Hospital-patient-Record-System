@@ -1,0 +1,180 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+from PIL import Image, ImageTk  # Pillow library for image
+import mysql.connector
+
+# Connect to MySQL database
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="Thanish@090304",  # Change this
+        database="hospital"
+    )
+
+# Functions
+def fetch_data():
+    for row in patient_table.get_children():
+        patient_table.delete(row)
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute("SELECT * FROM patients")
+    rows = cur.fetchall()
+    for row in rows:
+        patient_table.insert("", tk.END, values=row)
+    con.close()
+
+def add_patient():
+    if name_var.get() == "":
+        messagebox.showerror("Error", "Name is required")
+        return
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute("INSERT INTO patients (name, age, gender, contact, address, disease) VALUES (%s, %s, %s, %s, %s, %s)",
+                (name_var.get(), age_var.get(), gender_var.get(), contact_var.get(), address_var.get(), disease_var.get()))
+    con.commit()
+    con.close()
+    fetch_data()
+    clear_fields()
+    messagebox.showinfo("Success", "Patient added successfully!")
+
+def clear_fields():
+    id_var.set("")
+    name_var.set("")
+    age_var.set("")
+    gender_var.set("")
+    contact_var.set("")
+    address_var.set("")
+    disease_var.set("")
+
+def on_select(event):
+    selected = patient_table.focus()
+    values = patient_table.item(selected, 'values')
+    if values:
+        id_var.set(values[0])
+        name_var.set(values[1])
+        age_var.set(values[2])
+        gender_var.set(values[3])
+        contact_var.set(values[4])
+        address_var.set(values[5])
+        disease_var.set(values[6])
+
+def update_patient():
+    if id_var.get() == "":
+        messagebox.showerror("Error", "Select a patient to update")
+        return
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute("UPDATE patients SET name=%s, age=%s, gender=%s, contact=%s, address=%s, disease=%s WHERE id=%s",
+                (name_var.get(), age_var.get(), gender_var.get(), contact_var.get(), address_var.get(), disease_var.get(), id_var.get()))
+    con.commit()
+    con.close()
+    fetch_data()
+    clear_fields()
+    messagebox.showinfo("Success", "Patient updated successfully!")
+
+def delete_patient():
+    if id_var.get() == "":
+        messagebox.showerror("Error", "Select a patient to delete")
+        return
+    con = connect_db()
+    cur = con.cursor()
+    cur.execute("DELETE FROM patients WHERE id=%s", (id_var.get(),))
+    con.commit()
+    con.close()
+    fetch_data()
+    clear_fields()
+    messagebox.showinfo("Success", "Patient deleted successfully!")
+
+# GUI
+root = tk.Tk()
+root.title("Hospital Patient Record System")
+root.geometry("1000x630")
+root.configure(bg="#e6f2ff")
+
+
+# Variables
+id_var = tk.StringVar()
+name_var = tk.StringVar()
+age_var = tk.StringVar()
+gender_var = tk.StringVar()
+contact_var = tk.StringVar()
+address_var = tk.StringVar()
+disease_var = tk.StringVar()
+
+# Title Label
+title_label = tk.Label(root, text="🏥 Hospital Patient Record System 🏥", font=("Arial Black", 20), bg="#e6f2ff", fg="#003366")
+title_label.pack(pady=10)
+
+# Load Image
+try:
+    img = Image.open("patient.png")
+    img = img.resize((100, 100))
+    photo = ImageTk.PhotoImage(img)
+    img_label = tk.Label(root, image=photo, bg="#e6f2ff")
+    img_label.place(x=870, y=10)
+except:
+    pass  # If image not found, skip
+
+# Form Frame
+form_frame = tk.LabelFrame(root, text="Patient Information", padx=10, pady=10, bg="white", fg="#003366", font=("Helvetica", 12, "bold"))
+form_frame.place(x=20, y=60, width=420, height=430)
+
+tk.Label(form_frame, text="Name", font=("Arial", 10), bg="white").grid(row=0, column=0, sticky="w")
+tk.Entry(form_frame, textvariable=name_var, width=30).grid(row=0, column=1)
+
+tk.Label(form_frame, text="Age", font=("Arial", 10), bg="white").grid(row=1, column=0, sticky="w")
+tk.Entry(form_frame, textvariable=age_var, width=30).grid(row=1, column=1)
+
+tk.Label(form_frame, text="Gender", font=("Arial", 10), bg="white").grid(row=2, column=0, sticky="w")
+gender_combo = ttk.Combobox(form_frame, textvariable=gender_var, values=["Male", "Female", "Other"], width=27)
+gender_combo.grid(row=2, column=1)
+
+tk.Label(form_frame, text="Contact", font=("Arial", 10), bg="white").grid(row=3, column=0, sticky="w")
+tk.Entry(form_frame, textvariable=contact_var, width=30).grid(row=3, column=1)
+
+tk.Label(form_frame, text="Address", font=("Arial", 10), bg="white").grid(row=4, column=0, sticky="w")
+tk.Entry(form_frame, textvariable=address_var, width=30).grid(row=4, column=1)
+
+tk.Label(form_frame, text="Disease", font=("Arial", 10), bg="white").grid(row=5, column=0, sticky="w")
+tk.Entry(form_frame, textvariable=disease_var, width=30).grid(row=5, column=1)
+
+# Buttons
+tk.Button(form_frame, text="Add", command=add_patient, bg="#4CAF50", fg="white", width=15).grid(row=6, column=0, pady=10)
+tk.Button(form_frame, text="Update", command=update_patient, bg="#2196F3", fg="white", width=15).grid(row=6, column=1)
+tk.Button(form_frame, text="Delete", command=delete_patient, bg="#f44336", fg="white", width=15).grid(row=7, column=0)
+tk.Button(form_frame, text="Clear", command=clear_fields, bg="#9E9E9E", fg="white", width=15).grid(row=7, column=1)
+
+# Patient Table
+table_frame = tk.Frame(root, bg="red")
+table_frame.place(x=460, y=60, width=510, height=540)
+
+scroll_y = tk.Scrollbar(table_frame, orient=tk.VERTICAL)
+patient_table = ttk.Treeview(table_frame, columns=("ID", "Name", "Age", "Gender", "Contact", "Address", "Disease"),
+                             yscrollcommand=scroll_y.set)
+scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+scroll_y.config(command=patient_table.yview)
+
+patient_table.heading("ID", text="ID")
+patient_table.heading("Name", text="Name")
+patient_table.heading("Age", text="Age")
+patient_table.heading("Gender", text="Gender")
+patient_table.heading("Contact", text="Contact")
+patient_table.heading("Address", text="Address")
+patient_table.heading("Disease", text="Disease")
+
+patient_table['show'] = 'headings'
+patient_table.column("ID", width=30)
+patient_table.column("Name", width=100)
+patient_table.column("Age", width=50)
+patient_table.column("Gender", width=70)
+patient_table.column("Contact", width=90)
+patient_table.column("Address", width=100)
+patient_table.column("Disease", width=100)
+
+patient_table.pack(fill=tk.BOTH, expand=1)
+patient_table.bind("<ButtonRelease-1>", on_select)
+
+fetch_data()
+
+root.mainloop()
